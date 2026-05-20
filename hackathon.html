@@ -3397,17 +3397,13 @@
               <div>
                 <label style="font-size:9px; font-weight:700; color:#6B7280; text-transform:uppercase; display:block; margin-bottom:2px;">CommerÃ§ant</label>
                 <select id="sim-order-seller" class="trip-input" style="height:34px; padding:0 6px;">
-                  <option value="Restaurant Gueliz" data-lat="31.6370" data-lng="-8.0100">Restaurant Gueliz (Gueliz)</option>
-                  <option value="Medina Store" data-lat="31.6258" data-lng="-7.9891">Medina Store (Jamaa El Fna)</option>
-                  <option value="Bab Doukkala Mall" data-lat="31.6359" data-lng="-7.9986">Bab Doukkala Mall (Bab Doukkala)</option>
+                  <option value="Nomad" data-lat="31.6271" data-lng="-7.9866">Nomad</option>
                 </select>
               </div>
               <div>
                 <label style="font-size:9px; font-weight:700; color:#6B7280; text-transform:uppercase; display:block; margin-bottom:2px;">Adresse Client</label>
                 <select id="sim-order-client-address" class="trip-input" style="height:34px; padding:0 6px;">
-                  <option value="ENSA Marrakech" data-lat="31.6469" data-lng="-8.0203">ENSA Marrakech</option>
-                  <option value="Carre Eden" data-lat="31.6317" data-lng="-8.0081">Carre Eden</option>
-                  <option value="Koutoubia Park" data-lat="31.6244" data-lng="-7.9932">Koutoubia Park</option>
+                  <option value="Hay Hassani" data-lat="31.6460" data-lng="-8.0450">Hay Hassani</option>
                 </select>
               </div>
             </div>
@@ -3878,6 +3874,7 @@
     renderBusLinesList();
     renderParkingService();
     renderInsightsDashboard();
+    populateDeliverySelectors();
     updateCityScore();
     fetchWeather();
     locateUser(false);
@@ -6602,6 +6599,8 @@
   let activeDeliveryAdminFilter = 'all';
   let activeDeliveryTab = 'client';
   let riderSimulationInterval = null;
+  let deliveryRouteDrawToken = 0;
+  const deliveryRouteCache = new Map();
   let selectedLoginRole = 'client';
   let activeLoginMode = 'login';
 
@@ -6610,6 +6609,40 @@
     { id: 'rider-1', name: 'Rachid', status: 'Disponible', area: 'Gueliz', coords: DEFAULT_RIDER_POSITION },
     { id: 'rider-2', name: 'Salma', status: 'En ligne', area: 'Medina', coords: [31.6264, -7.9912] },
     { id: 'rider-3', name: 'Youssef', status: 'Occupe', area: 'Bab Doukkala', coords: [31.6359, -7.9986] }
+  ];
+  const DELIVERY_MERCHANTS = [
+    { name: 'Nomad', coords: [31.6271, -7.9866] },
+    { name: 'Terrasse des Epices', coords: [31.6290, -7.9894] },
+    { name: "L'Mida", coords: [31.6263, -7.9871] },
+    { name: 'La Cantine des Gazelles', coords: [31.6255, -7.9883] },
+    { name: 'Le Jardin', coords: [31.6294, -7.9890] },
+    { name: 'Dar Yacout', coords: [31.6361, -7.9921] },
+    { name: 'Al Fassia', coords: [31.6358, -8.0127] },
+    { name: 'Dar Essalam', coords: [31.6228, -7.9872] },
+    { name: 'Pepe Nero', coords: [31.6226, -7.9836] },
+    { name: 'Comptoir Darna', coords: [31.6222, -8.0029] },
+    { name: 'Safran by Koya', coords: [31.6309, -8.0105] },
+    { name: 'Le Foundouk', coords: [31.6311, -7.9854] },
+    { name: 'Bazaar Cafe', coords: [31.6278, -7.9877] },
+    { name: 'Le Trou Au Mur', coords: [31.6318, -7.9892] },
+    { name: 'Malah Cafe', coords: [31.6202, -7.9855] },
+    { name: 'Ksar El Hamra', coords: [31.6268, -7.9908] },
+    { name: 'La Trattoria', coords: [31.6352, -8.0120] },
+    { name: 'Plus61', coords: [31.6257, -8.0069] },
+    { name: 'Cafe Arabe', coords: [31.6300, -7.9892] },
+    { name: 'Dar Cherifa', coords: [31.6291, -7.9898] }
+  ];
+  const DELIVERY_CLIENT_ADDRESSES = [
+    { name: 'Hay Hassani', coords: [31.6460, -8.0450] },
+    { name: 'Massira I', coords: [31.6491, -8.0552] },
+    { name: 'Massira II', coords: [31.6532, -8.0598] },
+    { name: 'Massira III', coords: [31.6573, -8.0641] },
+    { name: 'Daoudiate', coords: [31.6484, -7.9978] },
+    { name: 'Sidi Youssef Ben Ali', coords: [31.6118, -7.9717] },
+    { name: 'Mabrouka', coords: [31.6488, -8.0278] },
+    { name: 'Targa', coords: [31.6694, -8.0467] },
+    { name: 'Izdihar', coords: [31.6601, -8.0129] },
+    { name: 'Charaf', coords: [31.6421, -8.0086] }
   ];
 
   function normalizeDeliveryRole(role) {
@@ -6661,6 +6694,22 @@
       cancelled: 'Annulée'
     };
     return labels[status] || status;
+  }
+
+  function populateDeliverySelectors() {
+    const sellerSelect = document.getElementById('sim-order-seller');
+    if (sellerSelect) {
+      sellerSelect.innerHTML = DELIVERY_MERCHANTS.map(merchant =>
+        `<option value="${merchant.name}" data-lat="${merchant.coords[0]}" data-lng="${merchant.coords[1]}">${merchant.name}</option>`
+      ).join('');
+    }
+
+    const addressSelect = document.getElementById('sim-order-client-address');
+    if (addressSelect) {
+      addressSelect.innerHTML = DELIVERY_CLIENT_ADDRESSES.map(address =>
+        `<option value="${address.name}" data-lat="${address.coords[0]}" data-lng="${address.coords[1]}">${address.name}</option>`
+      ).join('');
+    }
   }
 
   function selectLoginRole(role) {
@@ -7243,6 +7292,7 @@
     order.status = "arrived_seller";
     order.riderLat = order.sellerLat;
     order.riderLng = order.sellerLng;
+    order.deliveryRoutePath = null;
     order.updatedAt = new Date().toLocaleString();
     saveDeliveryOrders();
     showToast("Livreur arrivé chez le commerçant.");
@@ -7256,6 +7306,7 @@
     if (!order) return;
     
     order.status = "picking";
+    order.deliveryRoutePath = null;
     order.updatedAt = new Date().toLocaleString();
     
     saveDeliveryOrders();
@@ -7269,6 +7320,7 @@
     const order = deliveryOrders.find(o => o.orderId === orderId);
     if (!order || order.deliveryPersonId !== 'rider-1') return;
     order.status = "delivering";
+    order.deliveryRoutePath = null;
     order.updatedAt = new Date().toLocaleString();
     saveDeliveryOrders();
     showToast("En route vers le client.");
@@ -7285,6 +7337,7 @@
     order.status = "ended";
     order.riderLat = order.clientLat;
     order.riderLng = order.clientLng;
+    order.deliveryRoutePath = null;
     order.updatedAt = new Date().toLocaleString();
     
     saveDeliveryOrders();
@@ -7355,11 +7408,65 @@
     renderDeliveryUI();
   }
 
+  function getDeliveryDestination(order) {
+    if (!order) return null;
+    if (['accepted', 'arrived_seller'].includes(order.status)) {
+      return [order.sellerLat, order.sellerLng];
+    }
+    return [order.clientLat, order.clientLng];
+  }
+
+  function getDeliveryRouteCacheKey(order, origin, destination) {
+    return [
+      order.orderId,
+      order.status,
+      origin.map(value => value.toFixed(5)).join(','),
+      destination.map(value => value.toFixed(5)).join(',')
+    ].join(':');
+  }
+
+  async function getRoadAwareDeliveryRoute(order, origin, destination) {
+    const cacheKey = getDeliveryRouteCacheKey(order, origin, destination);
+    if (deliveryRouteCache.has(cacheKey)) return deliveryRouteCache.get(cacheKey);
+
+    const fallback = densifyRoute([origin, destination]);
+    const routePromise = fetchRoadRoute([origin, destination])
+      .then(route => route.length ? route : fallback)
+      .catch(() => fallback);
+    deliveryRouteCache.set(cacheKey, routePromise);
+    return routePromise;
+  }
+
+  function advanceDeliveryRiderOnRoute(order, route, metersPerTick = 70) {
+    const metric = buildRouteMetric(route);
+    if (!metric.path.length || !metric.totalDistance) return true;
+
+    const current = [order.riderLat || route[0][0], order.riderLng || route[0][1]];
+    let nearestDistance = 0;
+    let nearestGap = Infinity;
+
+    metric.path.forEach((point, index) => {
+      const gap = haversineDistance(current, point);
+      if (gap < nearestGap) {
+        nearestGap = gap;
+        nearestDistance = metric.distances[index] || 0;
+      }
+    });
+
+    const nextDistance = Math.min(metric.totalDistance, nearestDistance + (metersPerTick / 1000));
+    const progress = metric.totalDistance ? nextDistance / metric.totalDistance : 1;
+    const nextPoint = getPointOnRouteMetric(metric, progress);
+    order.riderLat = nextPoint[0];
+    order.riderLng = nextPoint[1];
+    order.deliveryRoutePath = route;
+    return metric.totalDistance - nextDistance < 0.08;
+  }
+
   // Live Map Simulation for Rider movement
   function startRiderSimulation(orderId) {
     if (riderSimulationInterval) clearInterval(riderSimulationInterval);
     
-    riderSimulationInterval = setInterval(() => {
+    riderSimulationInterval = setInterval(async () => {
       const order = deliveryOrders.find(o => o.orderId === orderId);
       if (!order || !['accepted', 'delivering'].includes(order.status)) {
         clearInterval(riderSimulationInterval);
@@ -7367,48 +7474,34 @@
         return;
       }
       
-      const currentLat = order.riderLat || DEFAULT_RIDER_POSITION[0];
-      const currentLng = order.riderLng || DEFAULT_RIDER_POSITION[1];
-      
-      let targetLat, targetLng;
-      if (order.status === 'accepted') {
-        targetLat = order.sellerLat;
-        targetLng = order.sellerLng;
-      } else {
-        targetLat = order.clientLat;
-        targetLng = order.clientLng;
-      }
-      
-      const dLat = targetLat - currentLat;
-      const dLng = targetLng - currentLng;
-      const dist = Math.sqrt(dLat*dLat + dLng*dLng);
-      
-      if (dist < 0.001) {
-        // Arrived at target!
+      const origin = [order.riderLat || DEFAULT_RIDER_POSITION[0], order.riderLng || DEFAULT_RIDER_POSITION[1]];
+      const destination = getDeliveryDestination(order);
+      const route = await getRoadAwareDeliveryRoute(order, origin, destination);
+      const arrived = advanceDeliveryRiderOnRoute(order, route, 85);
+
+      if (arrived) {
+        order.riderLat = destination[0];
+        order.riderLng = destination[1];
+        saveDeliveryOrders();
+        updateMapDeliveryMarkers();
         if (order.status === 'accepted') {
-          showToast("Livreur arrivÃ© chez le commerÃ§ant !");
+          showToast("Livreur arrivé chez le commerçant !");
         } else {
-          showToast("Livreur arrivÃ© chez le client !");
+          showToast("Livreur arrivé chez le client !");
         }
       } else {
-        // Move 20% closer
-        order.riderLat = currentLat + dLat * 0.20;
-        order.riderLng = currentLng + dLng * 0.20;
         saveDeliveryOrders();
-        
-        // Redraw markers on map dynamically
         updateMapDeliveryMarkers();
-        
-        // If current role is Rider, refresh the panel mission view to show updated coords & link
         if (activeDeliveryTab === 'rider') {
           renderRiderOrders();
         }
       }
-    }, 2000);
+    }, 1800);
   }
 
   // Clear all delivery markers from leaflet map
   function clearDeliveryMarkers() {
+    deliveryRouteDrawToken += 1;
     if (deliveryRiderMarker) { deliveryRiderMarker.remove(); deliveryRiderMarker = null; }
     if (deliveryClientMarker) { deliveryClientMarker.remove(); deliveryClientMarker = null; }
     if (deliverySellerMarker) { deliverySellerMarker.remove(); deliverySellerMarker = null; }
@@ -7420,6 +7513,8 @@
     if (!cityMap) return;
     
     clearDeliveryMarkers();
+    deliveryRouteDrawToken += 1;
+    const drawToken = deliveryRouteDrawToken;
     
     // Find active tracked order (the first active picking or delivering order, or the last placed order)
     let trackedOrder = deliveryOrders.find(o => ['accepted', 'arrived_seller', 'picking', 'delivering'].includes(o.status));
@@ -7466,26 +7561,26 @@
         .addTo(cityMap)
         .bindPopup(`<strong>Livreur: Rachid (R-1)</strong><br>Statut: ${getDeliveryStatusLabel(trackedOrder.status)}`);
         
-      // Draw polyline connecting rider and destination
-      const destCoords = ['accepted', 'arrived_seller'].includes(trackedOrder.status)
-        ? [trackedOrder.sellerLat, trackedOrder.sellerLng] 
-        : [trackedOrder.clientLat, trackedOrder.clientLng];
-        
-      deliveryRouteLine = L.polyline([[trackedOrder.riderLat, trackedOrder.riderLng], destCoords], {
-        color: '#16A34A',
-        weight: 4,
-        dashArray: '8 8',
-        opacity: 0.8
-      }).addTo(cityMap).bindPopup(['accepted', 'arrived_seller'].includes(trackedOrder.status) ? "Itinéraire vers le magasin" : "Itinéraire vers le client");
+      const destCoords = getDeliveryDestination(trackedOrder);
+      drawRoadAwareDeliveryLine(trackedOrder, [trackedOrder.riderLat, trackedOrder.riderLng], destCoords, drawToken);
     } else {
-      // Connect seller and client
-      deliveryRouteLine = L.polyline([[trackedOrder.sellerLat, trackedOrder.sellerLng], [trackedOrder.clientLat, trackedOrder.clientLng]], {
-        color: '#2563EB',
-        weight: 4,
-        dashArray: '8 8',
-        opacity: 0.8
-      }).addTo(cityMap).bindPopup("Trajet de livraison");
+      drawRoadAwareDeliveryLine(trackedOrder, [trackedOrder.sellerLat, trackedOrder.sellerLng], [trackedOrder.clientLat, trackedOrder.clientLng], drawToken, '#2563EB');
     }
+  }
+
+  async function drawRoadAwareDeliveryLine(order, origin, destination, drawToken, color = '#16A34A') {
+    const route = await getRoadAwareDeliveryRoute(order, origin, destination);
+    if (drawToken !== deliveryRouteDrawToken || !cityMap) return;
+    if (deliveryRouteLine) deliveryRouteLine.remove();
+    deliveryRouteLine = L.polyline(route, {
+      color,
+      weight: 5,
+      opacity: 0.82,
+      lineCap: 'round',
+      lineJoin: 'round',
+      smoothFactor: 1.1
+    }).addTo(cityMap).bindPopup(['accepted', 'arrived_seller'].includes(order.status) ? "Itinéraire par rues vers le commerçant" : "Itinéraire par rues vers le client");
+    deliveryRouteLine.bringToFront();
   }
 
   // Zoom/Center on active delivery
