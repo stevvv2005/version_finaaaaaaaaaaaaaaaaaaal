@@ -1,0 +1,807 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CityFlow â€” Smart City App</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIINfQwDkhO5S9qJq7f84LWLnA9nrC4h2jY="
+    crossorigin=""
+  />
+    <link rel="stylesheet" href="./assets/css/styles.css"/>
+</head>
+<body>
+<div id="cf-app">
+  <!-- â•â•â• SPLASH SCREEN â•â•â• -->
+  <div class="splash-screen" id="splashScreen" aria-label="Chargement CityFlow">
+    <div class="splash-logo"><span class="splash-logo-mark">CF</span> City<span style="color:#2563EB">Flow</span></div>
+    <svg class="city-build" width="190" height="94" viewBox="0 0 190 94" aria-hidden="true">
+      <rect x="16" y="38" width="24" height="42" rx="4" fill="#2563EB"/>
+      <rect x="52" y="22" width="28" height="58" rx="4" fill="#7C3AED"/>
+      <rect x="92" y="32" width="22" height="48" rx="4" fill="#0EA5E9"/>
+      <rect x="128" y="16" width="34" height="64" rx="4" fill="#22C55E"/>
+      <path d="M8 82 C46 65 78 96 116 76 C142 62 159 67 184 52" fill="none" stroke="#EF4444" stroke-width="6" stroke-linecap="round"/>
+    </svg>
+  </div>
+
+  <div class="login-screen" id="loginScreen" role="dialog" aria-modal="true" aria-label="Connexion CityFlow">
+    <form class="login-card" id="loginCard" onsubmit="submitLogin(event)">
+      <div class="login-brand">
+        <div class="login-logo">CF</div>
+        <div>
+          <div class="login-name">CityFlow</div>
+          <div class="login-subtitle">Votre mobilite urbaine intelligente</div>
+        </div>
+      </div>
+      <div class="login-tabs">
+        <button class="login-tab active" id="loginModeTab" type="button" onclick="setLoginMode('login')">Connexion</button>
+        <button class="login-tab" id="registerModeTab" type="button" onclick="setLoginMode('register')">Inscription</button>
+      </div>
+      <div class="login-field register-only">
+        <label for="registerFullName">Nom complet</label>
+        <input id="registerFullName" type="text" autocomplete="name">
+      </div>
+      <div class="login-field">
+        <label for="loginIdentifier">Email ou telephone</label>
+        <input id="loginIdentifier" type="text" autocomplete="username" required>
+      </div>
+      <div class="login-field">
+        <label for="loginPassword">Mot de passe</label>
+        <input id="loginPassword" type="password" autocomplete="current-password" required>
+      </div>
+      <div class="login-field register-role-only">
+        <label>Choisir votre role</label>
+        <div class="login-role-grid">
+          <button class="login-role active" id="loginRoleClient" type="button" data-role="client" onclick="selectLoginRole('client')">
+            <strong>Client</strong>
+            <span>Commander et suivre vos livraisons.</span>
+          </button>
+          <button class="login-role" id="loginRoleLivreur" type="button" data-role="livreur" onclick="selectLoginRole('livreur')">
+            <strong>Livreur</strong>
+            <span>Accepter et terminer les commandes.</span>
+          </button>
+        </div>
+      </div>
+      <button class="login-submit" id="loginSubmitBtn" type="submit">Se connecter</button>
+      <div class="login-hint" id="loginHint">Connexion avec votre compte CityFlow.</div>
+    </form>
+  </div>
+
+  <!-- â•â•â• ONBOARDING â•â•â• -->
+  <div class="onboarding" id="onboarding" role="dialog" aria-modal="true" aria-label="Presentation CityFlow">
+    <div class="onboarding-slide active" data-slide="0">
+      <svg width="96" height="96" viewBox="0 0 96 96"><circle cx="48" cy="48" r="42" fill="#EFF6FF"/><path d="M25 54 48 24l23 30-23 18-23-18Z" fill="#2563EB"/></svg>
+      <div class="onboarding-title">Bienvenue sur CityFlow</div>
+      <div class="onboarding-copy">Une carte intelligente pour trafic, bus, parkings et trajets urbains.</div>
+    </div>
+    <div class="onboarding-slide" data-slide="1">
+      <svg width="96" height="96" viewBox="0 0 96 96"><circle cx="48" cy="48" r="42" fill="#F0FDF4"/><path d="M24 58h48M30 42h36M38 28h20" stroke="#22C55E" stroke-width="8" stroke-linecap="round"/></svg>
+      <div class="onboarding-title">DÃ©cisions en temps rÃ©el</div>
+      <div class="onboarding-copy">Heatmap trafic, incidents, mÃ©tÃ©o, ETA et disponibilitÃ© parking simulÃ©s.</div>
+    </div>
+    <div class="onboarding-slide" data-slide="2">
+      <svg width="96" height="96" viewBox="0 0 96 96"><circle cx="48" cy="48" r="42" fill="#EEF2FF"/><rect x="28" y="30" width="40" height="34" rx="10" fill="#7C3AED"/><circle cx="40" cy="66" r="4" fill="#111827"/><circle cx="56" cy="66" r="4" fill="#111827"/></svg>
+      <div class="onboarding-title">CityBot vous guide</div>
+      <div class="onboarding-copy">Posez vos questions sur le meilleur parking, le bus ou les embouteillages.</div>
+    </div>
+    <button class="trip-btn primary" type="button" onclick="nextOnboardingSlide()" style="margin-top:18px">Continuer</button>
+  </div>
+
+  <div id="map" aria-label="Interactive Marrakech map"></div>
+
+  <!-- â•â•â• MAP SVG BACKGROUND â•â•â• -->
+  <svg class="map-bg" viewBox="0 0 390 844" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <rect width="390" height="844" fill="#dde8f5"/>
+
+    <!-- City blocks -->
+    <rect x="20"  y="100" width="80" height="60"  rx="5" fill="#c8d8f0" opacity="0.6"/>
+    <rect x="115" y="90"  width="60" height="75"  rx="5" fill="#c8d8f0" opacity="0.6"/>
+    <rect x="195" y="105" width="90" height="55"  rx="5" fill="#c8d8f0" opacity="0.5"/>
+    <rect x="300" y="95"  width="70" height="65"  rx="5" fill="#c8d8f0" opacity="0.6"/>
+    <rect x="20"  y="200" width="70" height="90"  rx="5" fill="#c8d8f0" opacity="0.5"/>
+    <rect x="110" y="205" width="85" height="80"  rx="5" fill="#c8d8f0" opacity="0.55"/>
+    <rect x="215" y="200" width="75" height="85"  rx="5" fill="#c8d8f0" opacity="0.5"/>
+    <rect x="305" y="200" width="65" height="80"  rx="5" fill="#c8d8f0" opacity="0.5"/>
+    <rect x="25"  y="340" width="90" height="70"  rx="5" fill="#c8d8f0" opacity="0.55"/>
+    <rect x="135" y="335" width="70" height="80"  rx="5" fill="#c8d8f0" opacity="0.5"/>
+    <rect x="225" y="340" width="80" height="70"  rx="5" fill="#c8d8f0" opacity="0.55"/>
+    <rect x="320" y="330" width="55" height="90"  rx="5" fill="#c8d8f0" opacity="0.5"/>
+    <rect x="20"  y="460" width="75" height="65"  rx="5" fill="#c8d8f0" opacity="0.5"/>
+    <rect x="115" y="455" width="90" height="70"  rx="5" fill="#c8d8f0" opacity="0.55"/>
+    <rect x="225" y="460" width="70" height="65"  rx="5" fill="#c8d8f0" opacity="0.5"/>
+    <rect x="310" y="455" width="60" height="70"  rx="5" fill="#c8d8f0" opacity="0.5"/>
+    <rect x="30"  y="560" width="80" height="55"  rx="5" fill="#c8d8f0" opacity="0.45"/>
+    <rect x="130" y="555" width="75" height="60"  rx="5" fill="#c8d8f0" opacity="0.45"/>
+    <rect x="225" y="560" width="85" height="55"  rx="5" fill="#c8d8f0" opacity="0.45"/>
+
+    <!-- Roads horizontal -->
+    <rect x="0" y="168" width="390" height="28" fill="#f0f4fa" opacity="0.92"/>
+    <rect x="0" y="305" width="390" height="26" fill="#f0f4fa" opacity="0.92"/>
+    <rect x="0" y="440" width="390" height="24" fill="#f0f4fa" opacity="0.90"/>
+    <rect x="0" y="545" width="390" height="22" fill="#f0f4fa" opacity="0.88"/>
+
+    <!-- Roads vertical -->
+    <rect x="96"  y="80" width="22" height="760" fill="#f0f4fa" opacity="0.92"/>
+    <rect x="196" y="80" width="22" height="760" fill="#f0f4fa" opacity="0.92"/>
+    <rect x="295" y="80" width="20" height="760" fill="#f0f4fa" opacity="0.88"/>
+
+    <!-- Road center dashes -->
+    <line x1="107" y1="100" x2="107" y2="840" stroke="#dde5f5" stroke-width="1.5" stroke-dasharray="10,12"/>
+    <line x1="207" y1="100" x2="207" y2="840" stroke="#dde5f5" stroke-width="1.5" stroke-dasharray="10,12"/>
+    <line x1="0"   y1="182" x2="390" y2="182"  stroke="#dde5f5" stroke-width="1.5" stroke-dasharray="10,12"/>
+    <line x1="0"   y1="318" x2="390" y2="318"  stroke="#dde5f5" stroke-width="1.5" stroke-dasharray="10,12"/>
+
+    <!-- Green areas -->
+    <ellipse cx="158" cy="388" rx="26" ry="20" fill="#b8dbb8" opacity="0.72"/>
+    <ellipse cx="262" cy="418" rx="20" ry="15" fill="#b8dbb8" opacity="0.65"/>
+    <ellipse cx="58"  cy="498" rx="18" ry="13" fill="#b8dbb8" opacity="0.62"/>
+
+    <!-- Route lines -->
+    <path d="M30 550 Q 107 545 107 440 Q 107 350 196 330 Q 250 320 295 305"
+          fill="none" stroke="#2563EB" stroke-width="4.5" stroke-linecap="round" opacity="0.82"/>
+    <path d="M295 440 Q 207 440 207 350 Q 207 280 107 280 Q 60 280 20 268"
+          fill="none" stroke="#f97316" stroke-width="4"   stroke-linecap="round" opacity="0.76"/>
+    <path d="M50 440 Q 96 440 96 545 Q 96 580 196 565"
+          fill="none" stroke="#22c55e" stroke-width="3.5" stroke-linecap="round" opacity="0.72"/>
+    <path d="M207 181 Q 295 181 305 305 Q 310 360 360 430"
+          fill="none" stroke="#7c3aed" stroke-width="3"   stroke-linecap="round" opacity="0.66"/>
+  </svg>
+
+  <!-- â•â•â• USER LOCATION â•â•â• -->
+  <div class="user-marker">
+    <div class="user-ring"></div>
+    <div class="user-dot"></div>
+  </div>
+
+  <!-- â•â•â• BUS MARKERS â•â•â• -->
+  <div class="marker" style="left:84px; top:290px;" onclick="setChip('bus')">
+    <svg width="30" height="36" viewBox="0 0 30 36"><rect x="2" y="2" width="26" height="23" rx="7" fill="#2563EB"/><text x="15" y="17" text-anchor="middle" fill="white" font-size="13" font-family="Inter" font-weight="700">B</text><path d="M15 25 L21 32 L9 32 Z" fill="#2563EB"/></svg>
+  </div>
+  <div class="marker" style="left:275px; top:215px;" onclick="setChip('bus')">
+    <svg width="30" height="36" viewBox="0 0 30 36"><rect x="2" y="2" width="26" height="23" rx="7" fill="#2563EB"/><text x="15" y="17" text-anchor="middle" fill="white" font-size="13" font-family="Inter" font-weight="700">B</text><path d="M15 25 L21 32 L9 32 Z" fill="#2563EB"/></svg>
+  </div>
+
+  <!-- â•â•â• PARKING MARKERS â•â•â• -->
+  <div class="marker" style="left:110px; top:450px;" onclick="setChip('parking')">
+    <svg width="30" height="36" viewBox="0 0 30 36"><rect x="2" y="2" width="26" height="23" rx="7" fill="#0891b2"/><text x="15" y="17" text-anchor="middle" fill="white" font-size="13" font-family="Inter" font-weight="700">P</text><path d="M15 25 L21 32 L9 32 Z" fill="#0891b2"/></svg>
+  </div>
+  <div class="marker" style="left:228px; top:336px;" onclick="setChip('parking')">
+    <svg width="30" height="36" viewBox="0 0 30 36"><rect x="2" y="2" width="26" height="23" rx="7" fill="#0891b2"/><text x="15" y="17" text-anchor="middle" fill="white" font-size="13" font-family="Inter" font-weight="700">P</text><path d="M15 25 L21 32 L9 32 Z" fill="#0891b2"/></svg>
+  </div>
+
+  <!-- â•â•â• TRAFFIC WARNING â•â•â• -->
+  <!-- â•â•â• TOP BAR â•â•â• -->
+  <div class="top-bar">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <circle cx="10" cy="10" r="7.5" stroke="white" stroke-width="1.8"/>
+          <path d="M10 5 L10 10 L14 12" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+          <circle cx="10" cy="10" r="2.2" fill="white"/>
+        </svg>
+      </div>
+      <span class="logo-text">City<span>Flow</span></span>
+    </div>
+    <div class="top-actions">
+      <div class="top-pill city-score" id="cityScoreBadge" aria-label="CityScore">88</div>
+      <div class="top-pill" id="weatherWidget" aria-label="Meteo">--Â°</div>
+      <button class="utility-btn" type="button" aria-label="Mode sombre" onclick="toggleDarkMode()">â˜¾</button>
+      <button class="utility-btn" type="button" aria-label="Mode demo" onclick="startDemoTour()">D</button>
+      <div class="icon-btn" role="button" tabindex="0" aria-label="Notifications" onclick="requestCityNotification()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2" stroke-linecap="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
+        <div class="notif-badge"></div>
+      </div>
+      <div class="avatar">AM</div>
+    </div>
+  </div>
+
+  <!-- â•â•â• SEARCH BAR â•â•â• -->
+  <div class="search-bar">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2.5" stroke-linecap="round">
+      <circle cx="11" cy="11" r="8"/>
+      <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+    <input type="text" placeholder="Search place, route or service..."/>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round">
+      <line x1="4" y1="6" x2="20" y2="6"/>
+      <line x1="8" y1="12" x2="20" y2="12"/>
+      <line x1="12" y1="18" x2="20" y2="18"/>
+    </svg>
+  </div>
+
+  <!-- â•â•â• SERVICE CHIPS â•â•â• -->
+  <div class="chips-row top-service-chips">
+    <div class="chip active" data-chip="map" onclick="setChip('map')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
+      Map
+    </div>
+    <div class="chip" data-chip="bus" onclick="setChip('bus')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="3"/><line x1="2" y1="10" x2="22" y2="10"/><circle cx="7" cy="17" r="1.5" fill="currentColor"/><circle cx="17" cy="17" r="1.5" fill="currentColor"/></svg>
+      Bus
+    </div>
+    <div class="chip" data-chip="parking" onclick="setChip('parking')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 17V8h4a3 3 0 0 1 0 6H9"/></svg>
+      Parking
+    </div>
+    <div class="chip" data-chip="traffic" onclick="setChip('traffic')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+      Traffic
+    </div>
+    <div class="chip" data-chip="route" onclick="setChip('route')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="18" r="2"/><path d="M5 8v5a2 2 0 0 0 2 2h10v-3"/></svg>
+      Route
+    </div>
+    <div class="chip" data-chip="alerts" onclick="setChip('alerts')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Alerts
+    </div>
+  </div>
+
+  <!-- â•â•â• MAP CONTROLS â•â•â• -->
+  <div class="map-controls">
+    <div class="map-btn" onclick="animateBtn(this, 'zoomIn')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </div>
+    <div class="map-btn" onclick="animateBtn(this, 'zoomOut')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </div>
+    <div class="map-btn" onclick="animateBtn(this, 'center')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+    </div>
+  </div>
+
+  <!-- â•â•â• BOTTOM SHEET â•â•â• -->
+  <div class="bottom-sheet" id="bottomSheet">
+    <div class="bs-handle-area" onclick="toggleSheet()">
+      <div class="bs-handle"></div>
+    </div>
+    <div class="bs-content">
+      <div class="chips-row">
+        <div class="chip" data-chip="bus" onclick="setChip('bus')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="3"/><line x1="2" y1="10" x2="22" y2="10"/><circle cx="7" cy="17" r="1.5" fill="currentColor"/><circle cx="17" cy="17" r="1.5" fill="currentColor"/></svg>
+          Public Transport
+        </div>
+        <div class="chip" data-chip="parking" onclick="setChip('parking')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 17V8h4a3 3 0 0 1 0 6H9"/></svg>
+          Parking
+        </div>
+        <div class="chip" data-chip="traffic" onclick="setChip('traffic')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+          Traffic
+        </div>
+        <div class="chip" data-chip="route" onclick="setChip('route')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="18" r="2"/><path d="M5 8v5a2 2 0 0 0 2 2h10v-3"/></svg>
+          Route Planner
+        </div>
+        <div class="chip" data-chip="bike" onclick="setChip('bike')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="5" cy="18" r="3"/><circle cx="19" cy="18" r="3"/><path d="M12 5h3l-3 6H8l4-6Zm0 6 4 7M8 11l-3 7"/></svg>
+          Bike & Taxi
+        </div>
+        <div class="chip" data-chip="alerts" onclick="setChip('alerts')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Alerts
+        </div>
+      </div>
+
+      <!-- DEFAULT VIEW -->
+      <div id="panel-default" class="content-panel visible">
+        <div class="bs-title">
+          Nearby Services
+          <span class="bs-back" onclick="toggleSheet()">See more â†‘</span>
+        </div>
+        <div class="quick-grid">
+          <div class="quick-card" onclick="setChip('parking')">
+            <div class="qc-icon" style="background:rgba(8,145,178,0.1)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 17V8h4a3 3 0 0 1 0 6H9"/></svg>
+            </div>
+            <div class="qc-label">Find Parking</div>
+            <div class="qc-sub">18 spots nearby</div>
+          </div>
+          <div class="quick-card" onclick="setChip('bus')">
+            <div class="qc-icon" style="background:rgba(37,99,235,0.1)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="3"/><line x1="2" y1="10" x2="22" y2="10"/><circle cx="7" cy="17" r="1.5" fill="#2563EB"/><circle cx="17" cy="17" r="1.5" fill="#2563EB"/></svg>
+            </div>
+            <div class="qc-label">Bus Departures</div>
+            <div class="qc-sub">Next in 4 min</div>
+          </div>
+          <div class="quick-card" onclick="setChip('route')">
+            <div class="qc-icon" style="background:rgba(124,58,237,0.1)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="18" r="2"/><path d="M5 8v5a2 2 0 0 0 2 2h10v-3"/></svg>
+            </div>
+            <div class="qc-label">Plan Route</div>
+            <div class="qc-sub">3 routes found</div>
+          </div>
+          <div class="quick-card" onclick="setChip('alerts')">
+            <div class="qc-icon" style="background:rgba(249,115,22,0.1)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2.5" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
+            </div>
+            <div class="qc-label">Report Issue</div>
+            <div class="qc-sub">2 alerts near you</div>
+          </div>
+        </div>
+        <div class="traffic-title">Smart Traffic</div>
+        <div class="traffic-row">
+          <div class="t-dot" style="background:#22c55e"></div>
+          <div class="t-info"><div class="t-road">Rond-point Gueliz</div><div class="t-status">Entree Nord fluide</div></div>
+          <div class="t-speed">18 cars</div>
+        </div>
+        <div class="traffic-row">
+          <div class="t-dot" style="background:#ef4444"></div>
+          <div class="t-info"><div class="t-road">Bab Doukkala</div><div class="t-status">Entree Est a eviter</div></div>
+          <div class="t-speed">48 cars</div>
+        </div>
+        <div class="traffic-row">
+          <div class="t-dot" style="background:#22c55e"></div>
+          <div class="t-info"><div class="t-road">Koutoubia</div><div class="t-status">Entree Est surveillee</div></div>
+          <div class="t-speed">44 cars</div>
+        </div>
+      </div>
+
+      <!-- BUS VIEW -->
+      <div id="panel-bus" class="content-panel">
+        <div class="bs-title">
+          Lignes de bus
+          <span class="bs-back" onclick="setChip('map')">Retour</span>
+        </div>
+        <div class="bus-lines-toolbar">
+          <input class="bus-search-input" id="busLineSearch" type="text" placeholder="Rechercher une ligne..." oninput="renderBusLinesList()"/>
+          <div class="bus-filter-row">
+            <button class="bus-filter-btn active" data-bus-filter="all" type="button" onclick="setBusLineFilter('all')">Toutes</button>
+            <button class="bus-filter-btn" data-bus-filter="urban" type="button" onclick="setBusLineFilter('urban')">Urbaines</button>
+            <button class="bus-filter-btn" data-bus-filter="interurban" type="button" onclick="setBusLineFilter('interurban')">Interurbaines</button>
+            <button class="bus-filter-btn" data-bus-filter="airport" type="button" onclick="setBusLineFilter('airport')">Aeroport</button>
+            <button class="bus-filter-btn" data-bus-filter="brt" type="button" onclick="setBusLineFilter('brt')">BRT</button>
+          </div>
+          <button class="trip-btn muted" type="button" style="margin-top:10px;width:100%" onclick="showAllBusLines()">Afficher toutes les lignes</button>
+        </div>
+        <div id="selectedLineDetails"></div>
+        <div class="network-card">
+          <div class="trip-card-title">Mini reseau bus</div>
+          <svg viewBox="0 0 320 120" width="100%" height="120" role="img" aria-label="Mini plan reseau bus">
+            <path d="M20 92 C82 72 100 34 160 50 S226 88 300 28" fill="none" stroke="#2563EB" stroke-width="7" stroke-linecap="round"/>
+            <path d="M28 30 H112 C150 30 172 88 218 88 H300" fill="none" stroke="#22C55E" stroke-width="6" stroke-linecap="round"/>
+            <path d="M44 104 L126 62 L204 40 L286 74" fill="none" stroke="#7C3AED" stroke-width="5" stroke-linecap="round"/>
+            <g fill="#fff" stroke="#111827" stroke-width="2">
+              <circle cx="20" cy="92" r="6"/><circle cx="160" cy="50" r="6"/><circle cx="300" cy="28" r="6"/>
+              <circle cx="112" cy="30" r="6"/><circle cx="218" cy="88" r="6"/><circle cx="286" cy="74" r="6"/>
+            </g>
+          </svg>
+          <button class="trip-btn muted" type="button" onclick="subscribeDelayAlerts()">M'alerter si retard &gt; 5 min</button>
+        </div>
+        <div id="busLinesList" class="bus-lines-list"></div>
+        <div class="bs-title">
+          Public Transport
+          <span class="bs-back" onclick="setChip('map')">â† Back</span>
+        </div>
+        <div class="feature-card">
+          <div class="fc-header">
+            <div class="fc-icon" style="background:rgba(37,99,235,0.1)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="3"/><line x1="2" y1="10" x2="22" y2="10"/><circle cx="7" cy="17" r="1.5" fill="#2563EB"/><circle cx="17" cy="17" r="1.5" fill="#2563EB"/></svg>
+            </div>
+            <div>
+              <div class="fc-name">Bus Line 12</div>
+              <div class="fc-sub">Destination: Central Station</div>
+            </div>
+          </div>
+          <div class="bus-timer">
+            <div>
+              <div class="bt-label">Next arrival</div>
+              <div style="display:flex;align-items:baseline;gap:4px">
+                <span class="bt-val">4</span>
+                <span class="bt-unit">min</span>
+              </div>
+            </div>
+            <div style="text-align:right">
+              <div class="bt-label">After that</div>
+              <div style="display:flex;align-items:baseline;gap:4px;justify-content:flex-end">
+                <span style="font-size:16px;font-weight:600;color:#6b7280">11</span>
+                <span class="bt-unit">min</span>
+              </div>
+            </div>
+          </div>
+          <button class="nav-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 8 16 12 12 16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            Track Bus
+          </button>
+        </div>
+        <div class="feature-card" style="opacity:0.82">
+          <div class="fc-header">
+            <div class="fc-icon" style="background:rgba(37,99,235,0.1)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="3"/><line x1="2" y1="10" x2="22" y2="10"/><circle cx="7" cy="17" r="1.5" fill="#2563EB"/><circle cx="17" cy="17" r="1.5" fill="#2563EB"/></svg>
+            </div>
+            <div>
+              <div class="fc-name">Bus Line 7</div>
+              <div class="fc-sub">Destination: Airport</div>
+            </div>
+          </div>
+          <div class="bus-timer">
+            <div>
+              <div class="bt-label">Next arrival</div>
+              <div style="display:flex;align-items:baseline;gap:4px">
+                <span class="bt-val" style="color:#f97316">9</span>
+                <span class="bt-unit">min</span>
+              </div>
+            </div>
+          </div>
+          <button class="nav-btn muted">Track Bus</button>
+        </div>
+      </div>
+
+      <!-- PARKING VIEW -->
+      <div id="panel-parking" class="content-panel">
+        <div class="bs-title">
+          Smart Parking
+          <span class="bs-back" onclick="setChip('map')">Retour</span>
+        </div>
+        <div class="parking-subtitle">Trouvez et reservez une place disponible a Marrakech</div>
+        <div class="parking-tools">
+          <div class="parking-filter-row">
+            <button class="parking-filter-chip active" type="button" data-parking-filter="all" onclick="setParkingTypeFilter('all')">Tous</button>
+            <button class="parking-filter-chip" type="button" data-parking-filter="underground" onclick="setParkingTypeFilter('underground')">Souterrain</button>
+            <button class="parking-filter-chip" type="button" data-parking-filter="surface" onclick="setParkingTypeFilter('surface')">Surface</button>
+            <button class="parking-filter-chip" type="button" data-parking-filter="pmr" onclick="setParkingTypeFilter('pmr')">PMR</button>
+            <button class="parking-filter-chip" type="button" data-parking-filter="bike" onclick="setParkingTypeFilter('bike')">Velo</button>
+          </div>
+          <button class="trip-btn muted" type="button" onclick="toggleParkingView()">Vue liste / carte</button>
+        </div>
+        <div id="parkingCards" class="parking-list"></div>
+      </div>
+
+      <!-- TRAFFIC VIEW -->
+      <div id="panel-traffic" class="content-panel">
+        <div class="bs-title">Smart Traffic</div>
+        <div class="traffic-row" style="padding:12px 0">
+          <div class="t-dot" style="background:#22c55e;width:12px;height:12px"></div>
+          <div class="t-info"><div class="t-road">Rond-point Gueliz</div><div class="t-status">Entree Nord fluide</div></div>
+          <div class="t-speed">18 cars</div>
+        </div>
+        <div class="traffic-row" style="padding:12px 0">
+          <div class="t-dot" style="background:#ef4444;width:12px;height:12px"></div>
+          <div class="t-info"><div class="t-road">Bab Doukkala</div><div class="t-status">Entree Est a eviter</div></div>
+          <div class="t-speed">48 cars</div>
+        </div>
+        <div class="traffic-row" style="padding:12px 0">
+          <div class="t-dot" style="background:#22c55e;width:12px;height:12px"></div>
+          <div class="t-info"><div class="t-road">Koutoubia</div><div class="t-status">Entree Est a eviter</div></div>
+          <div class="t-speed">44 cars</div>
+        </div>
+        <div class="traffic-row" style="padding:12px 0">
+          <div class="t-dot" style="background:#f97316;width:12px;height:12px"></div>
+          <div class="t-info"><div class="t-road">Gueliz</div><div class="t-status">Entree Est trafic moyen</div></div>
+          <div class="t-speed">31 cars</div>
+        </div>
+      </div>
+
+      <!-- ROUTE VIEW -->
+      <div id="panel-route" class="content-panel">
+        <div class="bs-title">Route Planner</div>
+        <div class="bs-title">
+          Planifier un trajet
+          <span class="bs-back" onclick="setChip('map')">Retour</span>
+        </div>
+        <div class="trip-card">
+          <div class="trip-card-title">Planifier un trajet</div>
+          <div class="trip-field">
+            <label for="tripStartInput">Depart</label>
+            <input class="trip-input" id="tripStartInput" type="text" list="routePlaceSuggestions" placeholder="Choisir votre position ou ecrire une adresse" onkeydown="if(event.key === 'Enter') setStartFromInput()"/>
+          </div>
+          <div class="trip-field">
+            <label for="tripDestinationInput">Destination</label>
+            <input class="trip-input" id="tripDestinationInput" type="text" list="routePlaceSuggestions" placeholder="Ou voulez-vous aller ?" onkeydown="if(event.key === 'Enter') setDestinationFromInput()"/>
+          </div>
+          <datalist id="routePlaceSuggestions"></datalist>
+          <div class="route-mode-tabs" role="group" aria-label="Mode de transport">
+            <button class="route-mode-btn active" data-route-mode="public_transport" type="button" onclick="setRouteMode('public_transport')">Bus</button>
+            <button class="route-mode-btn" data-route-mode="driving" type="button" onclick="setRouteMode('driving')">Voiture</button>
+            <button class="route-mode-btn" data-route-mode="walking" type="button" onclick="setRouteMode('walking')">Marche</button>
+          </div>
+          <div class="trip-actions-grid">
+            <button class="trip-btn" type="button" onclick="enableStartSelection()">Choisir depart sur la carte</button>
+            <button class="trip-btn" type="button" onclick="enableDestinationSelection()">Choisir destination sur la carte</button>
+          </div>
+          <button class="trip-btn primary" type="button" onclick="findTripFromInputs()">Calculer l'itineraire</button>
+          <button class="trip-btn muted" type="button" onclick="clearTripPlanning()">Effacer itineraire</button>
+          <div class="trip-status" id="tripStatus"></div>
+        </div>
+        <div id="routeRecommendation"></div>
+        <div style="display:flex;gap:8px;margin-bottom:14px">
+          <div style="background:#f8faff;border:0.5px solid rgba(37,99,235,0.15);border-radius:12px;padding:10px;flex:1">
+            <div style="font-size:10px;color:#9ca3af;margin-bottom:3px">From</div>
+            <div style="font-size:13px;font-weight:500;color:#1e293b">Current location</div>
+          </div>
+          <div style="background:#f8faff;border:0.5px solid rgba(37,99,235,0.15);border-radius:12px;padding:10px;flex:1">
+            <div style="font-size:10px;color:#9ca3af;margin-bottom:3px">To</div>
+            <div style="font-size:13px;font-weight:500;color:#1e293b">Central Station</div>
+          </div>
+        </div>
+        <div class="route-option best">
+          <div class="route-icon" style="background:#2563EB">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="3"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          </div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600;color:#1e293b">Bus Route</div>
+            <div style="font-size:11px;color:#6b7280">Via Line 12 Â· 18 min</div>
+          </div>
+          <div style="font-size:12px;font-weight:600;color:#2563EB;background:rgba(37,99,235,0.1);padding:4px 8px;border-radius:8px">Best</div>
+        </div>
+        <div class="route-option">
+          <div class="route-icon" style="background:#7c3aed">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+          </div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600;color:#1e293b">Walking</div>
+            <div style="font-size:11px;color:#6b7280">2.1 km Â· 26 min</div>
+          </div>
+        </div>
+        <div class="route-option">
+          <div class="route-icon" style="background:#22c55e">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><circle cx="5" cy="18" r="3"/><circle cx="19" cy="18" r="3"/><path d="M12 2l1 6h5l-4 3 2 6-6-4-6 4 2-6-4-3h5z"/></svg>
+          </div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600;color:#1e293b">Bike</div>
+            <div style="font-size:11px;color:#6b7280">2.1 km Â· 10 min</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ALERTS VIEW -->
+      <div id="panel-alerts" class="content-panel">
+        <div class="bs-title">Active Alerts</div>
+        <div class="alert-card warn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2.5" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:#9a3412">Road Alert</div>
+            <div style="font-size:11px;color:#c2410c">Trafic dense signale pres de Bab Doukkala</div>
+            <div style="font-size:10px;color:#9ca3af;margin-top:3px">5 min ago</div>
+          </div>
+        </div>
+        <div class="alert-card warn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2.5" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:#9a3412">Roadworks</div>
+            <div style="font-size:11px;color:#c2410c">Boulevard Hassan II â€” Lane closed until 18h</div>
+            <div style="font-size:10px;color:#9ca3af;margin-top:3px">32 min ago</div>
+          </div>
+        </div>
+        <div class="alert-card ok">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:#14532d">Parking Restored</div>
+            <div style="font-size:11px;color:#166534">Central Parking â€” All levels open</div>
+            <div style="font-size:10px;color:#9ca3af;margin-top:3px">1 hr ago</div>
+          </div>
+        </div>
+        <div class="traffic-intersection-card">
+          <div class="traffic-card-name">Insights ville</div>
+          <div class="traffic-card-sub">CityScore, congestion, parking et bus</div>
+          <div id="insightsDashboard" class="insight-grid"></div>
+        </div>
+      </div>
+
+      <!-- DELIVERY VIEW -->
+      <div id="panel-delivery" class="content-panel">
+        <div class="bs-title">
+          Suivi Livraison & Commandes
+          <span class="bs-back" onclick="setChip('map')">Retour</span>
+        </div>
+        <div class="delivery-role-note" id="delivery-role-note">Espace livraison charge selon votre role connecte.</div>
+        
+        <!-- Segment Control for Roles -->
+        <div class="delivery-tabs" role="group" aria-label="Espace Livraison">
+          <button class="delivery-tab-btn active" data-tab="client" onclick="setDeliveryTab('client')">Client</button>
+          <button class="delivery-tab-btn" data-tab="rider" onclick="setDeliveryTab('rider')">Livreur</button>
+          <button class="delivery-tab-btn" data-tab="admin" onclick="setDeliveryTab('admin')">Admin</button>
+        </div>
+
+        <!-- 1. CLIENT SPACE -->
+        <div id="delivery-client-space" class="delivery-space-content active">
+          <!-- Simulation Order Placed Box -->
+          <div class="feature-card delivery-order-sim-card">
+            <div class="trip-card-title">Simuler une commande</div>
+            <p class="onboarding-copy" style="font-size:11px; margin-bottom:10px;">Placez une commande auprÃ¨s d'un commerÃ§ant local pour tester le workflow de livraison.</p>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
+              <div>
+                <label style="font-size:9px; font-weight:700; color:#6B7280; text-transform:uppercase; display:block; margin-bottom:2px;">CommerÃ§ant</label>
+                <select id="sim-order-seller" class="trip-input" style="height:34px; padding:0 6px;">
+                  <option value="Nomad" data-lat="31.6271" data-lng="-7.9866">Nomad</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:9px; font-weight:700; color:#6B7280; text-transform:uppercase; display:block; margin-bottom:2px;">Adresse Client</label>
+                <select id="sim-order-client-address" class="trip-input" style="height:34px; padding:0 6px;">
+                  <option value="Hay Hassani" data-lat="31.6460" data-lng="-8.0450">Hay Hassani</option>
+                </select>
+              </div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
+              <div>
+                <label style="font-size:9px; font-weight:700; color:#6B7280; text-transform:uppercase; display:block; margin-bottom:2px;">Montant Total (DH)</label>
+                <input type="number" id="sim-order-amount" class="trip-input" value="145" style="height:34px;" />
+              </div>
+              <div>
+                <label style="font-size:9px; font-weight:700; color:#6B7280; text-transform:uppercase; display:block; margin-bottom:2px;">Paiement</label>
+                <input type="text" id="sim-order-payment" class="trip-input" value="Cash on Delivery" style="height:34px;" readonly />
+              </div>
+            </div>
+            <button class="trip-btn primary" onclick="createSimulatedOrder()">Confirmer & Placer Commande</button>
+          </div>
+
+          <!-- Active Client Orders -->
+          <div class="trip-card-title" style="margin-top:14px; margin-bottom:8px;">Mes Commandes Actives</div>
+          <div id="client-orders-container"></div>
+        </div>
+
+        <!-- 2. RIDER SPACE -->
+        <div id="delivery-rider-space" class="delivery-space-content">
+          <!-- Rider Profile Box -->
+          <div class="feature-card" style="padding:10px; margin-bottom:10px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div class="avatar" style="background:#16A34A; width:30px; height:30px; font-size:11px; display:flex; align-items:center; justify-content:center; border-radius:50%; color:white; font-weight:700;">R1</div>
+              <div>
+                <div class="fc-name" style="font-size:12px; font-weight:700;">Livreur : Rachid (R-1)</div>
+                <div class="fc-sub" style="font-size:10px; color:#6B7280;">Marrakech Â· En ligne / Disponible</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="trip-card-title" style="margin-bottom:8px;">Nouvelles Commandes (Disponibles)</div>
+          <div id="rider-available-orders"></div>
+
+          <div class="trip-card-title" style="margin-top:14px; margin-bottom:8px;">Ma Mission Actuelle</div>
+          <div id="rider-active-mission"></div>
+        </div>
+
+        <!-- 3. ADMIN SPACE -->
+        <div id="delivery-admin-space" class="delivery-space-content">
+          <!-- Admin Statistics -->
+          <div class="traffic-summary" style="margin-bottom:12px; display:grid; grid-template-columns:repeat(4, 1fr); gap:6px;">
+            <div class="traffic-stat" style="padding:8px 4px;">
+              <div class="traffic-stat-value" id="admin-stat-pending" style="font-size:16px;">0</div>
+              <div class="traffic-stat-label" style="font-size:8px;">En attente</div>
+            </div>
+            <div class="traffic-stat" style="padding:8px 4px;">
+              <div class="traffic-stat-value" id="admin-stat-active" style="font-size:16px;">0</div>
+              <div class="traffic-stat-label" style="font-size:8px;">En cours</div>
+            </div>
+            <div class="traffic-stat" style="padding:8px 4px;">
+              <div class="traffic-stat-value" id="admin-stat-ended" style="font-size:16px;">0</div>
+              <div class="traffic-stat-label" style="font-size:8px;">LivrÃ©es</div>
+            </div>
+            <div class="traffic-stat" style="padding:8px 4px;">
+              <div class="traffic-stat-value" id="admin-stat-cancelled" style="font-size:16px;">0</div>
+              <div class="traffic-stat-label" style="font-size:8px;">AnnulÃ©es</div>
+            </div>
+          </div>
+
+          <!-- Filters -->
+          <div class="parking-tools" style="margin-bottom:10px;">
+            <div class="parking-filter-row" style="display:flex; flex-wrap:wrap; gap:4px;">
+              <button class="parking-filter-chip active" id="admin-filter-all" onclick="filterAdminOrders('all')">Tous</button>
+              <button class="parking-filter-chip" id="admin-filter-normal" onclick="filterAdminOrders('normal')">En attente</button>
+              <button class="parking-filter-chip" id="admin-filter-picking" onclick="filterAdminOrders('picking')">RÃ©cupÃ©ration</button>
+              <button class="parking-filter-chip" id="admin-filter-delivering" onclick="filterAdminOrders('delivering')">Livraison</button>
+              <button class="parking-filter-chip" id="admin-filter-ended" onclick="filterAdminOrders('ended')">LivrÃ©es</button>
+              <button class="parking-filter-chip" id="admin-filter-cancelled" onclick="filterAdminOrders('cancelled')">AnnulÃ©es</button>
+            </div>
+          </div>
+
+          <!-- All Orders Admin List -->
+          <div class="trip-card-title" style="margin-bottom:8px;">Toutes les commandes</div>
+          <div id="admin-orders-list"></div>
+          <div class="trip-card-title" style="margin-top:14px; margin-bottom:8px;">Tous les livreurs</div>
+          <div id="admin-riders-list"></div>
+        </div>
+
+    </div><!-- /bs-content -->
+    <div class="bottom-footer">CityFlow Â© 2026 â€” Smart City Hackathon</div>
+  </div><!-- /bottom-sheet -->
+
+  <!-- â•â•â• BOTTOM NAVIGATION â•â•â• -->
+  <div class="bottom-nav">
+    <div class="nav-item active" id="nav-map" onclick="setNav('map')">
+      <div class="nav-icon" style="color:#2563EB">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
+      </div>
+      <span class="nav-label" style="color:#2563EB">Map</span>
+    </div>
+    <div class="nav-item" id="nav-mobility" onclick="setNav('mobility');setChip('bus')">
+      <div class="nav-icon" style="color:#9ca3af">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="3"/><line x1="2" y1="10" x2="22" y2="10"/><circle cx="7" cy="17" r="1.5" fill="currentColor"/><circle cx="17" cy="17" r="1.5" fill="currentColor"/></svg>
+      </div>
+      <span class="nav-label">Mobility</span>
+    </div>
+    <div class="nav-item" id="nav-parking" onclick="setNav('parking');setChip('parking')">
+      <div class="nav-icon" style="color:#9ca3af">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 17V8h4a3 3 0 0 1 0 6H9"/></svg>
+      </div>
+      <span class="nav-label">Parking</span>
+    </div>
+    <div class="nav-item" id="nav-alerts" onclick="setNav('alerts');setChip('alerts')">
+      <div class="nav-icon" style="color:#9ca3af; position:relative">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <div class="nav-badge"></div>
+      </div>
+      <span class="nav-label">Alerts</span>
+    </div>
+    <div class="nav-item" id="nav-delivery" onclick="setNav('delivery');setChip('delivery')">
+      <div class="nav-icon" style="color:#9ca3af">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+      </div>
+      <span class="nav-label">Livraison</span>
+    </div>
+    <div class="nav-item" id="nav-profile" onclick="setNav('profile')">
+      <div class="nav-icon" style="color:#9ca3af">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </div>
+      <span class="nav-label">Profile</span>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <!-- â•â•â• FLOATING SMART CONTROLS â•â•â• -->
+  <div class="data-refresh" id="dataRefresh"><span class="spinner"></span> Mise a jour</div>
+  <div class="skeleton-layer show" id="skeletonLayer">
+    <div class="skeleton-card" style="margin-top:140px"></div>
+    <div class="skeleton-card"></div>
+    <div class="skeleton-card"></div>
+  </div>
+  <div class="incident-panel" id="incidentPanel" role="dialog" aria-label="Signaler un incident">
+    <div class="trip-card-title">Signaler un incident</div>
+    <div class="incident-grid">
+      <button class="incident-choice active" type="button" data-incident-type="accident" onclick="selectIncidentType('accident')">Accident</button>
+      <button class="incident-choice" type="button" data-incident-type="travaux" onclick="selectIncidentType('travaux')">Travaux</button>
+      <button class="incident-choice" type="button" data-incident-type="obstacle" onclick="selectIncidentType('obstacle')">Obstacle</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button class="trip-btn primary" type="button" onclick="submitIncident()">Envoyer</button>
+      <button class="trip-btn muted" type="button" onclick="closeIncidentPanel()">Annuler</button>
+    </div>
+  </div>
+  <div class="camera-live-panel" id="cameraLivePanel" role="dialog" aria-label="Situation camera">
+    <div class="camera-live-head">
+      <div>
+        <div class="camera-live-title" id="cameraLiveTitle">Camera</div>
+        <div class="camera-live-subtitle" id="cameraLiveSubtitle">Situation en temps reel</div>
+      </div>
+      <button class="camera-live-close" type="button" aria-label="Fermer" onclick="closeTrafficCameraView()">x</button>
+    </div>
+    <div class="camera-live-scene" id="cameraLiveScene" aria-hidden="true"></div>
+    <div class="camera-live-meta">
+      <div class="camera-live-pill">
+        <div class="camera-live-value" id="cameraLiveVehicles">--</div>
+        <div class="camera-live-label">Vehicules</div>
+      </div>
+      <div class="camera-live-pill">
+        <div class="camera-live-value" id="cameraLiveStatus">--</div>
+        <div class="camera-live-label">Etat route</div>
+      </div>
+      <div class="camera-live-pill">
+        <div class="camera-live-value" id="cameraLiveDirection">--</div>
+        <div class="camera-live-label">Direction</div>
+      </div>
+    </div>
+  </div>
+  <div class="demo-tooltip" id="demoTooltip"></div>
+
+</div><!-- /cf-app -->
+
+<script
+  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+  crossorigin=""
+></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD5pdyyriXzuoY_02vgn0Y8DbbsutgXdZg"></script>
+<script src="https://unpkg.com/leaflet.gridlayer.googlemutant@0.15.0/dist/Leaflet.GoogleMutant.js"></script>
+<script type="module" src="./assets/js/app.js"></script>
+</body>
+</html>
+
+

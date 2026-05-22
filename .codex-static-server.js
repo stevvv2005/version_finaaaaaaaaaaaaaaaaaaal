@@ -14,7 +14,7 @@ const types = {
 http
   .createServer((req, res) => {
     let pathname = decodeURIComponent(new URL(req.url, "http://localhost").pathname);
-    if (pathname === "/") pathname = "/hackathon.html";
+    if (pathname === "/") pathname = "/index.html";
 
     const file = path.resolve(root, `.${pathname}`);
     if (!file.startsWith(root)) {
@@ -37,5 +37,5 @@ http
     });
   })
   .listen(port, "127.0.0.1", () => {
-    console.log(`Listening on http://127.0.0.1:${port}/hackathon.html`);
+    console.log(`Listening on http://127.0.0.1:${port}/index.html`);
   });
